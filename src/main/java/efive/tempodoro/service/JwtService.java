@@ -1,6 +1,7 @@
 package efive.tempodoro.service;
 
 import java.util.Date;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -8,6 +9,8 @@ import org.springframework.stereotype.Service;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.JWTVerifier;
 import com.auth0.jwt.algorithms.Algorithm;
+import com.auth0.jwt.exceptions.JWTVerificationException;
+import com.auth0.jwt.interfaces.DecodedJWT;
 
 import jakarta.annotation.PostConstruct;
 import lombok.AccessLevel;
@@ -50,4 +53,18 @@ public class JwtService {
                 .withExpiresAt(expiresAt)
                 .sign(algorithm);
     }
+
+    public Optional<String> validateTokenAndGetUsername(String token) {
+        try {
+            DecodedJWT decodedJWT = verifier.verify(token);
+            return Optional.ofNullable(decodedJWT.getSubject());
+        } catch (JWTVerificationException e) {
+            return Optional.empty();
+        }
+    }
+
+    public boolean isTokenValid(String token) {
+        return validateTokenAndGetUsername(token).isPresent();
+    }
+
 }
