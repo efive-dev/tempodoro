@@ -61,6 +61,23 @@ public class PomodoroSessionController {
         return ResponseEntity.ok(sessionResponse);
     }
 
+    @PatchMapping("/complete")
+    public ResponseEntity<PomodoroSessionResponse> completeSession(
+            Authentication authentication) {
+
+        if (authentication == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        String username = (String) authentication.getPrincipal();
+        Long userId = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"))
+                .getId();
+
+        PomodoroSessionResponse sessionResponse = pomodoroSessionService.completeSession(userId);
+        return ResponseEntity.ok(sessionResponse);
+    }
+
     @GetMapping("/history")
     public ResponseEntity<List<PomodoroSessionResponse>> getSessionHistory(
             @RequestParam(required = false) String from,

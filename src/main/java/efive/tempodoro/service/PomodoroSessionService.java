@@ -66,6 +66,23 @@ public class PomodoroSessionService {
                 .orElseThrow(() -> new RuntimeException("Failed to stop the session"));
     }
 
+    public PomodoroSessionResponse completeSession(Long userId) {
+        PomodoroSession pomodoroSession = pomodoroSessionRepository
+                .findByUserIdAndStatus(userId, SessionStatus.ACTIVE)
+                .orElseThrow(() -> new IllegalStateException("No active session found"));
+
+        LocalDateTime now = LocalDateTime.now();
+        pomodoroSession.setStatus(SessionStatus.COMPLETED);
+        pomodoroSession.setStoppedAt(now);
+        pomodoroSession.setCompleted(true);
+        pomodoroSession.setCompletedAt(now);
+
+        return Optional.of(pomodoroSession)
+                .map(pomodoroSessionRepository::save)
+                .map(this::convertToResponse)
+                .orElseThrow(() -> new RuntimeException("Failed to stop the session"));
+    }
+
     public List<PomodoroSessionResponse> getSessionHistory(Long userId, LocalDateTime from, LocalDateTime to) {
         List<PomodoroSession> sessions;
 

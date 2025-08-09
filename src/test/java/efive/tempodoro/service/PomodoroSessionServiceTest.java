@@ -165,6 +165,53 @@ public class PomodoroSessionServiceTest {
     }
 
     @Test
+    void completeSession_shouldBeFineSuccess() {
+        PomodoroSession activeSession = PomodoroSession.builder()
+                .id(sessionId)
+                .user(user)
+                .sessionDuration(25)
+                .breakDuration(5)
+                .status(SessionStatus.ACTIVE)
+                .startedAt(LocalDateTime.now())
+                .completed(false)
+                .build();
+
+        when(pomodoroSessionRepository.findByUserIdAndStatus(user.getId(), SessionStatus.ACTIVE))
+                .thenReturn(Optional.of(activeSession));
+
+        when(pomodoroSessionRepository.save(any(PomodoroSession.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        PomodoroSessionResponse response = pomodoroSessionService.completeSession(user.getId());
+
+        assertThat(response).isNotNull()
+                .extracting(
+                        PomodoroSessionResponse::getId,
+                        PomodoroSessionResponse::getUserId,
+                        PomodoroSessionResponse::getStatus,
+                        PomodoroSessionResponse::getCompleted)
+                .containsExactly(
+                        sessionId,
+                        user.getId(),
+                        SessionStatus.COMPLETED,
+                        true);
+
+        verify(pomodoroSessionRepository).findByUserIdAndStatus(user.getId(), SessionStatus.ACTIVE);
+        verify(pomodoroSessionRepository).save(any(PomodoroSession.class));
+    }
+
+    @Test
+    void completeSession_shouldThrowWhenNoActiveSession() {
+        when(pomodoroSessionRepository.findByUserIdAndStatus(user.getId(), SessionStatus.ACTIVE))
+                .thenReturn(Optional.empty());
+
+        assertThrows(IllegalStateException.class,
+                () -> pomodoroSessionService.completeSession(user.getId()));
+
+        verify(pomodoroSessionRepository).findByUserIdAndStatus(user.getId(), SessionStatus.ACTIVE);
+    }
+
+    @Test
     void getSessionHistory_shouldReturnSessionHistoryNoParametersSuccess() {
         List<PomodoroSession> pomodoroSessions = new ArrayList<>();
         pomodoroSessions.add(PomodoroSession.builder()
