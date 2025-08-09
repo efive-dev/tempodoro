@@ -25,14 +25,14 @@ public class PomodoroSessionService {
     @Autowired
     private UserRepository userRepository;
 
-    public PomodoroSessionResponse startSession(PomodoroSessionRequest request) {
+    public PomodoroSessionResponse startSession(Long userId, PomodoroSessionRequest request) {
         pomodoroSessionRepository
-                .findByUserIdAndStatus(request.getUserId(), SessionStatus.ACTIVE)
+                .findByUserIdAndStatus(userId, SessionStatus.ACTIVE)
                 .ifPresent(session -> {
                     throw new IllegalStateException("User already has an active session");
                 });
 
-        User user = userRepository.findById(request.getUserId())
+        User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
         PomodoroSession pomodoroSession = PomodoroSession.builder()
@@ -48,6 +48,20 @@ public class PomodoroSessionService {
                 .map(pomodoroSessionRepository::save)
                 .map(this::convertToResponse)
                 .orElseThrow(() -> new RuntimeException("Failed to create session"));
+    }
+
+    public PomodoroSessionResponse stopSession(Long userId) {
+        PomodoroSession pomodoroSession = pomodoroSessionRepository
+                .findByUserIdAndStatus(userId, SessionStatus.ACTIVE)
+                .orElseThrow(() -> new IllegalStateException("No active session found"));
+
+        pomodoroSession.setStatus(SessionStatus.STOPPED);
+        pomodoroSession.setStoppedAt(LocalDateTime.now());
+
+        return Optional.of(pomodoroSession)
+                .map(pomodoroSessionRepository::save)
+                .map(this::convertToResponse)
+                .orElseThrow(() -> new RuntimeException("Failed to stop the session"));
     }
 
     private PomodoroSessionResponse convertToResponse(PomodoroSession pomodoroSession) {

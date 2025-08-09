@@ -1,6 +1,5 @@
 package efive.tempodoro.dto;
 
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import lombok.Builder;
 import lombok.Getter;
@@ -10,9 +9,6 @@ import lombok.Setter;
 @Setter
 @Builder
 public class PomodoroSessionRequest {
-
-    @NotNull
-    private Long userId;
 
     @Positive
     @Builder.Default

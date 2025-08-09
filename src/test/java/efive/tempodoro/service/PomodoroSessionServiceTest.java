@@ -41,7 +41,8 @@ public class PomodoroSessionServiceTest {
             .build();
 
     private PomodoroSessionRequest request = PomodoroSessionRequest.builder()
-            .userId(1L)
+            .sessionDuration(25)
+            .breakDuration(5)
             .build();
 
     private Long sessionId = 10L;
@@ -57,6 +58,9 @@ public class PomodoroSessionServiceTest {
         PomodoroSession savedSession = PomodoroSession.builder()
                 .id(sessionId)
                 .user(user)
+                .sessionDuration(request.getSessionDuration())
+                .breakDuration(request.getBreakDuration())
+                .status(SessionStatus.ACTIVE)
                 .startedAt(LocalDateTime.now())
                 .completed(false)
                 .build();
@@ -64,7 +68,7 @@ public class PomodoroSessionServiceTest {
         when(pomodoroSessionRepository.save(any(PomodoroSession.class)))
                 .thenReturn(savedSession);
 
-        PomodoroSessionResponse response = pomodoroSessionService.startSession(request);
+        PomodoroSessionResponse response = pomodoroSessionService.startSession(user.getId(), request);
         assertThat(response)
                 .isNotNull()
                 .extracting(
@@ -90,21 +94,70 @@ public class PomodoroSessionServiceTest {
     @Test
     void startSession_shouldThrowUserHasAlreadySession() {
         when(pomodoroSessionRepository.findByUserIdAndStatus(user.getId(), SessionStatus.ACTIVE))
-                .thenThrow(IllegalStateException.class);
+                .thenReturn(Optional.of(
+                        PomodoroSession.builder().id(1L).build()));
 
         assertThrows(IllegalStateException.class,
-                () -> pomodoroSessionService.startSession(request));
+                () -> pomodoroSessionService.startSession(user.getId(), request));
     }
 
     @Test
     void startSession_shouldThrowUserNotFound() {
         when(pomodoroSessionRepository.findByUserIdAndStatus(user.getId(), SessionStatus.ACTIVE))
                 .thenReturn(Optional.empty());
+
         when(userRepository.findById(user.getId()))
-                .thenThrow(IllegalStateException.class);
+                .thenReturn(Optional.empty());
+
+        assertThrows(IllegalArgumentException.class,
+                () -> pomodoroSessionService.startSession(user.getId(), request));
+    }
+
+    @Test
+    void stopSession_shouldBeFineSuccess() {
+        PomodoroSession activeSession = PomodoroSession.builder()
+                .id(sessionId)
+                .user(user)
+                .sessionDuration(25)
+                .breakDuration(5)
+                .status(SessionStatus.ACTIVE)
+                .startedAt(LocalDateTime.now())
+                .completed(false)
+                .build();
+
+        when(pomodoroSessionRepository.findByUserIdAndStatus(user.getId(), SessionStatus.ACTIVE))
+                .thenReturn(Optional.of(activeSession));
+
+        when(pomodoroSessionRepository.save(any(PomodoroSession.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        PomodoroSessionResponse response = pomodoroSessionService.stopSession(user.getId());
+
+        assertThat(response).isNotNull()
+                .extracting(
+                        PomodoroSessionResponse::getId,
+                        PomodoroSessionResponse::getUserId,
+                        PomodoroSessionResponse::getStatus,
+                        PomodoroSessionResponse::getCompleted)
+                .containsExactly(
+                        sessionId,
+                        user.getId(),
+                        SessionStatus.STOPPED,
+                        false);
+
+        verify(pomodoroSessionRepository).findByUserIdAndStatus(user.getId(), SessionStatus.ACTIVE);
+        verify(pomodoroSessionRepository).save(any(PomodoroSession.class));
+    }
+
+    @Test
+    void stopSession_shouldThrowWhenNoActiveSession() {
+        when(pomodoroSessionRepository.findByUserIdAndStatus(user.getId(), SessionStatus.ACTIVE))
+                .thenReturn(Optional.empty());
 
         assertThrows(IllegalStateException.class,
-                () -> pomodoroSessionService.startSession(request));
+                () -> pomodoroSessionService.stopSession(user.getId()));
+
+        verify(pomodoroSessionRepository).findByUserIdAndStatus(user.getId(), SessionStatus.ACTIVE);
     }
 
 }
