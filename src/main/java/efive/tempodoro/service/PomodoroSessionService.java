@@ -1,7 +1,9 @@
 package efive.tempodoro.service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -62,6 +64,20 @@ public class PomodoroSessionService {
                 .map(pomodoroSessionRepository::save)
                 .map(this::convertToResponse)
                 .orElseThrow(() -> new RuntimeException("Failed to stop the session"));
+    }
+
+    public List<PomodoroSessionResponse> getSessionHistory(Long userId, LocalDateTime from, LocalDateTime to) {
+        List<PomodoroSession> sessions;
+
+        if (from != null && to != null) {
+            sessions = pomodoroSessionRepository.findByUserIdAndStartedAtBetweenOrderByStartedAtDesc(userId, from, to);
+        } else {
+            sessions = pomodoroSessionRepository.findByUserIdOrderByStartedAtDesc(userId);
+        }
+
+        return sessions.stream()
+                .map(this::convertToResponse)
+                .collect(Collectors.toList());
     }
 
     private PomodoroSessionResponse convertToResponse(PomodoroSession pomodoroSession) {

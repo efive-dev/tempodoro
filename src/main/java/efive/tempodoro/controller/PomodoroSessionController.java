@@ -5,6 +5,10 @@ import efive.tempodoro.dto.PomodoroSessionResponse;
 import efive.tempodoro.repository.UserRepository;
 import efive.tempodoro.service.PomodoroSessionService;
 import jakarta.validation.Valid;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -56,4 +60,27 @@ public class PomodoroSessionController {
         PomodoroSessionResponse sessionResponse = pomodoroSessionService.stopSession(userId);
         return ResponseEntity.ok(sessionResponse);
     }
+
+    @GetMapping("/history")
+    public ResponseEntity<List<PomodoroSessionResponse>> getSessionHistory(
+            @RequestParam(required = false) String from,
+            @RequestParam(required = false) String to,
+            Authentication authentication) {
+
+        if (authentication == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        String username = (String) authentication.getPrincipal();
+        Long userId = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"))
+                .getId();
+
+        LocalDateTime fromDate = (from != null) ? LocalDateTime.parse(from) : null;
+        LocalDateTime toDate = (to != null) ? LocalDateTime.parse(to) : null;
+
+        List<PomodoroSessionResponse> sessions = pomodoroSessionService.getSessionHistory(userId, fromDate, toDate);
+        return ResponseEntity.ok(sessions);
+    }
+
 }

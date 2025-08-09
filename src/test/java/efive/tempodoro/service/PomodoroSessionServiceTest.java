@@ -1,12 +1,16 @@
 package efive.tempodoro.service;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.assertj.core.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -158,6 +162,53 @@ public class PomodoroSessionServiceTest {
                 () -> pomodoroSessionService.stopSession(user.getId()));
 
         verify(pomodoroSessionRepository).findByUserIdAndStatus(user.getId(), SessionStatus.ACTIVE);
+    }
+
+    @Test
+    void getSessionHistory_shouldReturnSessionHistoryNoParametersSuccess() {
+        List<PomodoroSession> pomodoroSessions = new ArrayList<>();
+        pomodoroSessions.add(PomodoroSession.builder()
+                .id(sessionId)
+                .user(user)
+                .sessionDuration(25)
+                .breakDuration(5)
+                .status(SessionStatus.ACTIVE)
+                .startedAt(LocalDateTime.now())
+                .completed(false)
+                .build());
+        pomodoroSessions.add(PomodoroSession.builder()
+                .id(sessionId + 1)
+                .user(user)
+                .sessionDuration(300)
+                .breakDuration(100)
+                .status(SessionStatus.STOPPED)
+                .startedAt(LocalDateTime.now())
+                .completed(false)
+                .build());
+
+        when(pomodoroSessionRepository.findByUserIdOrderByStartedAtDesc(user.getId())).thenReturn(pomodoroSessions);
+
+        List<PomodoroSessionResponse> response = pomodoroSessionService.getSessionHistory(user.getId(), null, null);
+
+        assertThat(response).hasSize(2);
+        assertThat(response.get(0).getId()).isEqualTo(10L);
+        assertThat(response.get(1).getId()).isEqualTo(11L);
+
+        verify(pomodoroSessionRepository, times(1))
+                .findByUserIdOrderByStartedAtDesc(user.getId());
+    }
+
+    @Test
+    void getSessionHistory_NegativePath_ShouldReturnEmptyList() {
+        when(pomodoroSessionRepository.findByUserIdOrderByStartedAtDesc(user.getId()))
+                .thenReturn(Collections.emptyList());
+
+        List<PomodoroSessionResponse> responses = pomodoroSessionService.getSessionHistory(user.getId(), null, null);
+
+        assertThat(responses).isEmpty();
+
+        verify(pomodoroSessionRepository, times(1))
+                .findByUserIdOrderByStartedAtDesc(user.getId());
     }
 
 }
