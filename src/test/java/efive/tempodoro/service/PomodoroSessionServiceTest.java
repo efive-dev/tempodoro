@@ -258,4 +258,48 @@ public class PomodoroSessionServiceTest {
                 .findByUserIdOrderByStartedAtDesc(user.getId());
     }
 
+    @Test
+    void deleteSession_shouldDeleteSuccessfully() {
+        PomodoroSession session = PomodoroSession.builder()
+                .id(sessionId)
+                .user(user)
+                .build();
+
+        when(pomodoroSessionRepository.findById(sessionId))
+                .thenReturn(Optional.of(session));
+
+        pomodoroSessionService.deleteSession(user.getId(), sessionId);
+
+        verify(pomodoroSessionRepository).findById(sessionId);
+        verify(pomodoroSessionRepository).delete(session);
+    }
+
+    @Test
+    void deleteSession_shouldThrowWhenSessionNotFound() {
+        when(pomodoroSessionRepository.findById(sessionId))
+                .thenReturn(Optional.empty());
+
+        assertThrows(IllegalArgumentException.class,
+                () -> pomodoroSessionService.deleteSession(user.getId(), sessionId));
+
+        verify(pomodoroSessionRepository).findById(sessionId);
+    }
+
+    @Test
+    void deleteSession_shouldThrowWhenUserDoesNotOwnSession() {
+        User anotherUser = User.builder().id(999L).username("OtherUser").build();
+        PomodoroSession session = PomodoroSession.builder()
+                .id(sessionId)
+                .user(anotherUser)
+                .build();
+
+        when(pomodoroSessionRepository.findById(sessionId))
+                .thenReturn(Optional.of(session));
+
+        assertThrows(SecurityException.class,
+                () -> pomodoroSessionService.deleteSession(user.getId(), sessionId));
+
+        verify(pomodoroSessionRepository).findById(sessionId);
+    }
+
 }

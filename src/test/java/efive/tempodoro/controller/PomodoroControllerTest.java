@@ -2,7 +2,10 @@ package efive.tempodoro.controller;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -222,4 +225,47 @@ public class PomodoroControllerTest {
         mockMvc.perform(get("/api/pomodoro/history"))
                 .andExpect(status().isUnauthorized());
     }
+
+    @Test
+    void deleteSession_shouldDeleteSuccessfully() throws Exception {
+        when(authentication.getPrincipal()).thenReturn(user.getUsername());
+        when(userRepository.findByUsername(user.getUsername())).thenReturn(Optional.of(user));
+
+        mockMvc.perform(delete("/api/pomodoro/{sessionId}", 123L)
+                .principal(authentication))
+                .andExpect(status().isNoContent());
+
+        verify(pomodoroSessionService).deleteSession(user.getId(), 123L);
+    }
+
+    @Test
+    void deleteSession_shouldReturn401WhenNoAuthentication() throws Exception {
+        mockMvc.perform(delete("/api/pomodoro/{sessionId}", 123L))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void deleteSession_shouldReturn404WhenSessionNotFound() throws Exception {
+        when(authentication.getPrincipal()).thenReturn(user.getUsername());
+        when(userRepository.findByUsername(user.getUsername())).thenReturn(Optional.of(user));
+        doThrow(new IllegalArgumentException("Session not found"))
+                .when(pomodoroSessionService).deleteSession(user.getId(), 123L);
+
+        mockMvc.perform(delete("/api/pomodoro/{sessionId}", 123L)
+                .principal(authentication))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void deleteSession_shouldReturn403WhenForbidden() throws Exception {
+        when(authentication.getPrincipal()).thenReturn(user.getUsername());
+        when(userRepository.findByUsername(user.getUsername())).thenReturn(Optional.of(user));
+        doThrow(new SecurityException("Forbidden"))
+                .when(pomodoroSessionService).deleteSession(user.getId(), 123L);
+
+        mockMvc.perform(delete("/api/pomodoro/{sessionId}", 123L)
+                .principal(authentication))
+                .andExpect(status().isForbidden());
+    }
+
 }

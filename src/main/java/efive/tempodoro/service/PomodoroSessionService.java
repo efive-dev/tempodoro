@@ -97,6 +97,17 @@ public class PomodoroSessionService {
                 .collect(Collectors.toList());
     }
 
+    public void deleteSession(Long userId, Long sessionId) {
+        PomodoroSession pomodoroSession = pomodoroSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new IllegalArgumentException("Session not found"));
+
+        if (!pomodoroSession.getUser().getId().equals(userId)) {
+            throw new SecurityException("You do not have permission to delete this session");
+        }
+
+        pomodoroSessionRepository.delete(pomodoroSession);
+    }
+
     private PomodoroSessionResponse convertToResponse(PomodoroSession pomodoroSession) {
         return PomodoroSessionResponse.builder()
                 .id(pomodoroSession.getId())
