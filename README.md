@@ -48,6 +48,8 @@ cd tempodoro
 http://localhost:8080
 ```
 
+Or use the tui that can be found at [tempodoro-tui](https://github.com/efive-dev/tempodoro-tui).
+
 ---
 
 ## Database Schema
