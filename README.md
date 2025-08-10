@@ -8,7 +8,7 @@ The application is built using:
 - **Java** with **Spring Boot** for the backend and REST API.
 - **Spring Security** for authentication & authorization with JWT.
 - **JPA / Hibernate** for database interaction.
-- A relational database (H2 in this case).
+- A relational database (H2 in this case). The application.properties is still set up for dev, so you can actually use the h2-console.
 
 The API is secured, but you can easily test it with tools like `curl` or Postman.
 It is also set up with swagger, so it can be tested through that ui as well.
